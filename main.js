@@ -3,7 +3,7 @@
 define(function(require, exports, module) {
     'use strict';
 
-    var FileTreeView = brackets.getModule('project/FileTreeView'),
+    var ProjectManager = brackets.getModule('project/ProjectManager'),
         FileUtils = brackets.getModule('file/FileUtils'),
         DocumentManager = brackets.getModule('document/DocumentManager'),
         ExtensionUtils = brackets.getModule('utils/ExtensionUtils');
@@ -210,7 +210,7 @@ define(function(require, exports, module) {
     }
 
     // register the icon provider
-    FileTreeView.addIconProvider(iconProvider);
+    ProjectManager.addIconProvider(iconProvider);
 
 	$(DocumentManager).on('workingSetAdd workingSetAddList workingSetRemove workingSetRemoveList fileNameChange pathDeleted workingSetSort', function() {
 		renderWorkingSet();
