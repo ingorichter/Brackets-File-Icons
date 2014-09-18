@@ -1,4 +1,16 @@
+/*global brackets, define, document, $*/
+
 define(function(require, exports, module) {
+    'use strict';
+
+    var FileTreeView = brackets.getModule('project/FileTreeView'),
+        FileUtils = brackets.getModule('file/FileUtils'),
+        DocumentManager = brackets.getModule('document/DocumentManager'),
+        ExtensionUtils = brackets.getModule('utils/ExtensionUtils');
+
+	// load the custom styles with the Icon font
+    ExtensionUtils.loadStyleSheet(module, 'styles/style.css');
+
 	var fileInfo = {};
 
 	function addIcon(extension, icon, color, size) {
@@ -8,9 +20,11 @@ define(function(require, exports, module) {
 			size: size
 		};
 	}
+
 	function addAlias(extension, other) {
 		fileInfo[extension] = fileInfo[other];
 	}
+
 	function getDefaultIcon(extension) {
 		if (extension === '') {
 			return {
@@ -19,19 +33,19 @@ define(function(require, exports, module) {
 			};
 		}
 
-		var hue = 0;
-		var saturnation = 90;
-		var lightness = 50;
+		var hue = 0,
+            saturation = 90,
+            lightness = 50;
 
 		for (var i = 0; i < extension.length; ++i) {
 			hue += extension.charCodeAt(i) * 42 * (i + 2);
 			hue %= 256;
-			saturnation = (saturnation + (extension.charCodeAt(i) % 30) + 70) / 2;
+			saturation = (saturation + (extension.charCodeAt(i) % 30) + 70) / 2;
 			lightness = (lightness + (extension.charCodeAt(i) * 3 % 40) + 30) / 2;
 		}
 
 		return {
-			color: 'hsl(' + Math.round(hue) + ', ' + Math.round(saturnation) + '%, ' + Math.round(lightness) + '%)',
+			color: 'hsl(' + Math.round(hue) + ', ' + Math.round(saturation) + '%, ' + Math.round(lightness) + '%)',
 			icon: '\uf12f'
 		};
 	}
@@ -39,7 +53,7 @@ define(function(require, exports, module) {
 	// XML
 	addIcon('xml',    '\uf05f', '#ff6600');
 	addIcon('html',   '\uf13b', '#d28445');
-    	addAlias('htm',   'html');
+    addAlias('htm',   'html');
 
 	// Stylesheets
 	addIcon('css',    '\uf13c', '#6a9fb5');
@@ -50,7 +64,7 @@ define(function(require, exports, module) {
 
 	// JavaScript
 	addIcon('js',     '\ue097', '#f4bf75');
-	addIcon('ejs',     '\uf05f', '#f4bf75');
+	addIcon('ejs',    '\uf05f', '#f4bf75');
 	addIcon('ts',     '\uf05f', '#0074c1');
 	addIcon('coffee', '\ue0b3', '#c9905e');
 	addIcon('json',   '\uf096', '#F4BF75');
@@ -108,23 +122,23 @@ define(function(require, exports, module) {
 	// Webservers
 	addIcon('htaccess', '\uf02f');
 	addIcon('htpasswd', '\uf02f');
-	addIcon('conf',   '\uf02f');
+	addIcon('conf',     '\uf02f');
 
 	// Archive
-	addIcon('zip',    '\uf013');
-	addIcon('rar',    '\uf013');
-	addIcon('7z',     '\uf013');
-	addIcon('tgz',    '\uf013');
-	addIcon('tar',    '\uf013');
-	addIcon('gz',     '\uf013');
-	addIcon('bzip',   '\uf013');
+	addIcon('zip',   '\uf013');
+    addAlias('rar',  'zip');
+    addAlias('7z',   'zip');
+    addAlias('tgz',  'zip');
+    addAlias('tar',  'zip');
+    addAlias('gz',   'zip');
+    addAlias('bzip', 'zip');
 
 	// Settings
-	addIcon('project', '\uf013');
-	addAlias('jscsrc', 'project');
-	addAlias('jshintrc', 'project');
+	addIcon('project',    '\uf013');
+	addAlias('jscsrc',    'project');
+	addAlias('jshintrc',  'project');
 	addAlias('csslintrc', 'project');
-	addAlias('todo', 'project');
+	addAlias('todo',      'project');
 	addAlias('classpath', 'project');
 
 	// Other text files
@@ -135,47 +149,37 @@ define(function(require, exports, module) {
 	addIcon('ls', '\uf011');
 	addIcon('org', '\uf011');
 
-	var ProjectManager = brackets.getModule('project/ProjectManager');
-	var DocumentManager = brackets.getModule('document/DocumentManager');
-	var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
+    function createNewIconNodeJQuery(data) {
+        var $newNode = $('<ins>');
 
-	ExtensionUtils.loadStyleSheet(module, "styles/style.css");
+        $newNode.text(data.icon);
+        $newNode.addClass('file-icon jstree-icon');
+        $newNode.css({
+            color: data.color,
+            fontSize: (data.size || 16) + 'px'
+        });
 
-	function renderFiles() {
-		$('#project-files-container ul').removeClass('jstree-no-icons').addClass('jstree-icons');
+        return $newNode;
+    }
 
-		var $items = $('#project-files-container li>a');
+    function createNewIconNodeW3C(data) {
+        var domNode = document.createElement('ins');
 
-		$items.each(function(index) {
-			var ext = ($(this).find('.extension').text() || $(this).text().substr(1) || '').substr(1).toLowerCase();
-			var lastIndex = ext.lastIndexOf('.');
-			if (lastIndex > 0) {
-				ext = ext.substr(lastIndex + 1);
-			}
-            
-			var data;
+        domNode.textContent = data.icon;
+        domNode.className = 'file-icon jstree-icon';
 
-			if ($(this).parent().hasClass('jstree-leaf')) {
-				data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
-			} else {
-				return;
-			}
+        domNode.style.color = data.color;
+        domNode.style.fontSize = (data.size || 16) + 'px';
 
-			var $new = $(this).find('.jstree-icon');
-			$new.text(data.icon);
-			$new.addClass('file-icon');
-			$new.css({
-				color: data.color,
-				fontSize: (data.size || 16) + 'px'
-			});
-		});
-	}
+        return domNode;
+    }
+
 	function renderWorkingSet() {
-		$('#open-files-container li>a>.file-icon').remove();
+		$('#working-set-list-container li>a>.file-icon').remove();
 
-		var $items = $('#open-files-container li>a');
+		var $items = $('#working-set-list-container li>a');
 
-		$items.each(function(index) {
+		$items.each(function() {
 			var ext = ($(this).find('.extension').text() || $(this).text() || '').substr(1).toLowerCase();
 			var lastIndex = ext.lastIndexOf('.');
 			if (lastIndex > 0) {
@@ -184,32 +188,33 @@ define(function(require, exports, module) {
 
 			var data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
 
-			var $new = $('<div>');
-			$new.text(data.icon);
-			$new.addClass('file-icon');
-			$new.css({
-				color: data.color,
-				fontSize: (data.size || 16) + 'px'
-			});
-			$(this).prepend($new);
+			$(this).prepend(createNewIconNodeJQuery(data));
 		});
 	}
 
-	function projectOpen() {
-		var events = 'load_node.jstree create_node.jstree set_text.jstree';
+    /**
+      @param {Object} fileTreeItemData
+                name: this.props.name,
+                isFile: true,
+                fullPath: this.myPath()
+    */
+    function iconProvider(fileTreeItemData) {
+        if (fileTreeItemData.isFile) {
+            var ext = FileUtils.getFileExtension(fileTreeItemData.name),
+                data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
 
-		renderFiles();
+            return createNewIconNodeJQuery(data);
+        } else {
+            return $('<div>');
+        }
+    }
 
-		$('#project-files-container').off(events, renderFiles);
-		$('#project-files-container').on(events, renderFiles);
-	}
+    // register the icon provider
+    FileTreeView.addIconProvider(iconProvider);
 
-	$(ProjectManager).on('projectOpen projectRefresh', projectOpen);
-
-	$(DocumentManager).on("workingSetAdd workingSetAddList workingSetRemove workingSetRemoveList fileNameChange pathDeleted workingSetSort", function() {
+	$(DocumentManager).on('workingSetAdd workingSetAddList workingSetRemove workingSetRemoveList fileNameChange pathDeleted workingSetSort', function() {
 		renderWorkingSet();
 	});
 
-	projectOpen();
-	renderWorkingSet();
+    renderWorkingSet();
 });
