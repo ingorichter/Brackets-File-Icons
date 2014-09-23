@@ -6,7 +6,8 @@ define(function(require, exports, module) {
     var ProjectManager = brackets.getModule('project/ProjectManager'),
         FileUtils = brackets.getModule('file/FileUtils'),
         DocumentManager = brackets.getModule('document/DocumentManager'),
-        ExtensionUtils = brackets.getModule('utils/ExtensionUtils');
+        ExtensionUtils = brackets.getModule('utils/ExtensionUtils'),
+        WorkingSetView = brackets.getModule('project/WorkingSetView');
 
 	// load the custom styles with the Icon font
     ExtensionUtils.loadStyleSheet(module, 'styles/style.css');
@@ -149,11 +150,11 @@ define(function(require, exports, module) {
 	addIcon('ls', '\uf011');
 	addIcon('org', '\uf011');
 
-    function createNewIconNodeJQuery(data) {
+    function createNewIconNodeJQuery(data, classname) {
         var $newNode = $('<ins>');
 
         $newNode.text(data.icon);
-        $newNode.addClass('file-icon jstree-icon');
+        $newNode.addClass(classname);
         $newNode.css({
             color: data.color,
             fontSize: (data.size || 16) + 'px'
@@ -174,23 +175,26 @@ define(function(require, exports, module) {
         return domNode;
     }
 
-	function renderWorkingSet() {
-		$('#working-set-list-container li>a>.file-icon').remove();
+    function getIconForFile(itemData) {
+        var ext = FileUtils.getFileExtension(itemData.name),
+            data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
 
-		var $items = $('#working-set-list-container li>a');
+        return data;
+    }
 
-		$items.each(function() {
-			var ext = ($(this).find('.extension').text() || $(this).text() || '').substr(1).toLowerCase();
-			var lastIndex = ext.lastIndexOf('.');
-			if (lastIndex > 0) {
-				ext = ext.substr(lastIndex + 1);
-			}
+    /**
+      @param {Object} fileTreeItemData
+                name: this.props.name,
+                isFile: true,
+                fullPath: this.myPath()
+    */
+    function workingSetIconProvider(workingSetItemData) {
+        if (workingSetItemData.isFile) {
+            var data = getIconForFile(workingSetItemData);
 
-			var data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
-
-			$(this).prepend(createNewIconNodeJQuery(data));
-		});
-	}
+            return createNewIconNodeJQuery(data, "workingset-file-icon");
+        }
+    }
 
     /**
       @param {Object} fileTreeItemData
@@ -200,21 +204,21 @@ define(function(require, exports, module) {
     */
     function iconProvider(fileTreeItemData) {
         if (fileTreeItemData.isFile) {
-            var ext = FileUtils.getFileExtension(fileTreeItemData.name),
-                data = fileInfo.hasOwnProperty(ext) ? fileInfo[ext] : getDefaultIcon(ext);
+            var data = getIconForFile(fileTreeItemData);
 
-            return createNewIconNodeJQuery(data);
+            return createNewIconNodeJQuery(data, "file-icon jstree-icon");
         } else {
             return $('<div>');
         }
     }
 
-    // register the icon provider
-    ProjectManager.addIconProvider(iconProvider);
+    // register the icon provider for the file tree
+    if (typeof ProjectManager.addIconProvider === 'function') {
+        ProjectManager.addIconProvider(iconProvider);
+    }
 
-	$(DocumentManager).on('workingSetAdd workingSetAddList workingSetRemove workingSetRemoveList fileNameChange pathDeleted workingSetSort', function() {
-		renderWorkingSet();
-	});
-
-    renderWorkingSet();
+    // register the icon provider for the working set view
+    if (typeof WorkingSetView.addIconProvider === 'function') {
+        WorkingSetView.addIconProvider(workingSetIconProvider);
+    }
 });
